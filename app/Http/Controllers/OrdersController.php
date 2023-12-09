@@ -138,6 +138,14 @@ class OrdersController extends Controller
         //
     }
 
+    public function confirm(Request $request)
+    {
+        $id = $request->order;
+        $order = Order::where('id',$id)->update(['isPaid'=>1]);
+        return response()->json(['message' => 'paid successfully']);
+ 
+    }
+
     /**
      * Remove the specified resource from storage.
      */

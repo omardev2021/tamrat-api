@@ -65,8 +65,8 @@ class ProductsController extends Controller
         ],200);
     }
 
-    public function show($id) {
-        $product = Product::where('id',$id)->first();
+    public function show($slug) {
+        $product = Product::where('slug',$slug)->first();
         $sim = Product::where('category',$product->category)->limit(3)->get();
         return response()->json([
             
@@ -78,6 +78,18 @@ class ProductsController extends Controller
     public function countries() {
         $product = Country::with('cities')->get();
         return response()->json($product,200);
+    }
+
+    public function search(Request $request)
+    {
+        $products = Product::where('name_en', 'like', "%{$request->term}%")
+            ->orWhere('name_ar', 'like', "%{$request->term}%")
+            ->get();
+
+            return response()->json([
+                'success' => true,
+                'products' =>$products
+            ],200);
     }
 
 

@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Models\Otp;
 use Illuminate\Support\Facades\Mail;
 use Mailjet\Resources;
-
+use Mailjet\Client;
 
 class AuthController extends Controller
 {
@@ -88,63 +88,87 @@ class AuthController extends Controller
 
     public function send_sms(Request $request)
     {
+
+        try{
+            $this->validate($request, [
+                'phoneNumber' => 'required|min:3|exists:users,phone',
+            ]);
+    
+    
+            // Insert OTP record into the database
+            $otp = Otp::create([
+                'phone' => $request->phoneNumber,
+                'otp' => rand(1000, 9999), // Generate a random OTP
+            ]);
+    
+            $msgtext = "رمز التحقق الخاص بك في تمرات هو ".$otp->otp;
+    
+            $this->sendSMS($request->phoneNumber,$msgtext);
+    
+    
+            return response()->json(['message' => 'otp sent'], 200);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to send OTP'], 500);
+
+
+        }
       
 
-        $this->validate($request, [
-            'phoneNumber' => 'required|min:3|exists:users,phone',
-        ]);
-
-
-        // Insert OTP record into the database
-        $otp = Otp::create([
-            'phone' => $request->phoneNumber,
-            'otp' => rand(1000, 9999), // Generate a random OTP
-        ]);
-
-        $msgtext = "رمز التحقق الخاص بك في تمرات هو ".$otp->otp;
-
-        $this->sendSMS($request->phoneNumber,$msgtext);
-
-
-        return response()->json(['message' => 'otp sent'], 200);
+      
 
     }
 
 
     public function send_email(Request $request)
     {
-     
-        $this->validate($request, [
-            'email' => 'required|email|exists:users,email', // 1MB Max
-        ]);
-        // Insert OTP record into the database
-        $otp = Otp::create([
-            'email' => $request->email,
-            'otp' => rand(1000, 9999), // Generate a random OTP
-        ]);
+        try {
+            $this->validate($request, [
+                'email' => 'required|email|exists:users,email',
+            ]);
+    
+            $otp = Otp::create([
+                'email' => $request->email,
+                'otp' => rand(1000, 9999),
+            ]);
+    
+            $this->send_email_helper($request->email, $otp->otp);
+    
+            return response()->json(['message' => 'OTP sent'], 200);
+        } catch (\Exception $e) {
+            // Log the exception if needed
+            \Log::error($e->getMessage());
+    
+            // Return a response with an error message
+            return response()->json(['error' => 'Failed to send OTP'], 500);
+        }
+    }
+    
 
-        $data = [
-            'otp' => $otp->otp,
-
-        ];
-        $mj = new \Mailjet\Client('0f2691fc2f219fbd06b37f24c25ba639', '18133e418df9bfe5df35ab7b3f5d5416');
+    private function send_email_helper($email, $otp)
+    {
+      
+        $mj = new Client('0f2691fc2f219fbd06b37f24c25ba639', '18133e418df9bfe5df35ab7b3f5d5416');
         $body = [
             'FromEmail' => "info@tamratdates.com",
             'FromName' => "تمرات",
             'Subject' => "رمز التحقق",
             'Text-part' => "رمز التحقق الخاص بك في تمرات",
-            'Html-part' => "<h3>رمز التحقق الخاص بك في تمرات هو ".$otp->otp."</h3>",
+            'Html-part' => "<h3>رمز التحقق الخاص بك في تمرات هو " . $otp . "</h3>",
             'Recipients' => [
                 [
-                    'Email' => $request->email
-                ]
-            ]
+                    'Email' => $email,
+                ],
+            ],
         ];
+
+        // Send the email
         $response = $mj->post(Resources::$Email, ['body' => $body]);
 
-    
-        return response()->json(['message' => 'otp sent'], 200);
-    
+        // Check if the email sending was successful
+        if (!$response->success()) {
+            throw new \Exception('Email sending failed');
+        }
     }
 
     public function login_user(Request $request) {

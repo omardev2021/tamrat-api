@@ -25,8 +25,9 @@ use App\Http\Controllers\HelpersController;
 //     return $request->user();
 // });
 
-
-Route::post('/orders/payment',[MyFatoorahController::class,'index']);
+Route::middleware(['cors'])->group(function () {
+    
+    Route::post('/orders/payment',[MyFatoorahController::class,'index']);
 Route::post('/orders/confirm',[OrdersController::class,'confirm']);
 
 Route::get('/products/countries',[ProductsController::class,'countries']);
@@ -73,4 +74,8 @@ Route::get('/orders/profile/mine',[OrdersController::class,'my_orders']);
 
 
 });
+
+});
+
+
 

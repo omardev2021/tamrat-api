@@ -8,6 +8,7 @@ use App\Http\Controllers\OrdersController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\MyFatoorahController;
 use App\Http\Controllers\HelpersController;
+use App\Http\Controllers\AdminController;
 
 
 /*
@@ -61,6 +62,12 @@ Route::post('/upload-image', [OrdersController::class, 'upload']);
 Route::post('/users/contact',[HelpersController::class,'contact']);
 Route::post('/users/letter',[HelpersController::class,'letter']);
 
+
+Route::get('/orders',[OrdersController::class,'all']);
+
+Route::get('/orders/admin/contacts',[AdminController::class,'contacts']);
+Route::get('/orders/admin/receipts',[AdminController::class,'receipts']);
+Route::get('/orders/admin/newsletters',[AdminController::class,'newsletters']);
 
 
 Route::group(['middleware' => ['auth:sanctum']],function(){

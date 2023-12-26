@@ -48,6 +48,7 @@ class OrdersController extends Controller
             'shippingPrice' =>  $request->shippingPrice,
             'totalPrice' =>  $request->totalPrice,
             'weight' =>  $request->weight,
+            'discount' =>  $request->discount,
          'created_at' => now()
         ]);
 
@@ -133,9 +134,10 @@ class OrdersController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function all()
     {
-        //
+        $orders = Order::all();
+        return response()->json($orders);
     }
 
     public function confirm(Request $request)
@@ -145,6 +147,8 @@ class OrdersController extends Controller
         return response()->json(['message' => 'paid successfully']);
  
     }
+
+    
 
     /**
      * Remove the specified resource from storage.

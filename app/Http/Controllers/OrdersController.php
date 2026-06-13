@@ -44,7 +44,7 @@ class OrdersController extends Controller
             'paymentMethod' => $request->paymentMethod,
             'address' => $request->address,
             'itemsPrice' =>  $request->itemsPrice,
-            'taxPrice' =>  20,
+            'taxPrice' => round($request->totalPrice * 15 / 115, 2),
             'shippingPrice' =>  $request->shippingPrice,
             'totalPrice' =>  $request->totalPrice,
             'weight' =>  $request->weight,
@@ -91,6 +91,47 @@ class OrdersController extends Controller
         ],201);
     }
 
+
+    public function storeGuest(Request $request)
+    {
+        $order_id = Order::insertGetId([
+            'user_id'       => null,
+            'name'          => $request->name,
+            'email'         => $request->email ?? '',
+            'phone'         => $request->phone,
+            'country'       => $request->country,
+            'city'          => $request->city,
+            'paymentMethod' => $request->paymentMethod,
+            'address'       => $request->address,
+            'itemsPrice'    => $request->itemsPrice,
+            'taxPrice'      => round($request->totalPrice * 15 / 115, 2),
+            'shippingPrice' => $request->shippingPrice,
+            'totalPrice'    => $request->totalPrice,
+            'weight'        => $request->weight,
+            'discount'      => $request->discount,
+            'created_at'    => now(),
+        ]);
+
+        $carts = $request->orderItems;
+        foreach ($carts as $cart) {
+            OrderItem::insert([
+                'order_id'   => $order_id,
+                'product_id' => $cart['id'],
+                'qty'        => $cart['qty'],
+                'price'      => $cart['price'],
+                'weight'     => $cart['weight'],
+            ]);
+        }
+
+        $order = Order::where('id', $order_id)->first();
+        $items = OrderItem::where('order_id', $order_id)->get();
+
+        return response()->json([
+            'success'    => true,
+            'order'      => $order,
+            'orderItems' => $items,
+        ], 201);
+    }
     public function my_orders()
     {
         $user =    auth('sanctum')->user()->id;

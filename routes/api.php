@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\OrdersController;
+use App\Http\Controllers\MoyasarController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\MyFatoorahController;
 use App\Http\Controllers\HelpersController;
@@ -29,7 +30,8 @@ use App\Http\Controllers\AdminController;
 Route::middleware(['cors'])->group(function () {
     
     Route::post('/orders/payment',[MyFatoorahController::class,'index']);
-Route::post('/orders/confirm',[OrdersController::class,'confirm']);
+// RETIRED 2026-06-13: unverified confirm replaced by /payments/verify (Moyasar)
+// Route::post('/orders/confirm',[OrdersController::class,'confirm']);
 
 Route::get('/products/countries',[ProductsController::class,'countries']);
 
@@ -70,6 +72,10 @@ Route::get('/orders/admin/receipts',[AdminController::class,'receipts']);
 Route::get('/orders/admin/newsletters',[AdminController::class,'newsletters']);
 
 
+
+Route::post('/users/update-user-data',[AuthController::class,'update_user_data']);
+Route::post('/orders/guest',[OrdersController::class,'storeGuest']);
+Route::post('/payments/verify',[MoyasarController::class,'verify']);
 Route::group(['middleware' => ['auth:sanctum']],function(){
 
 Route::post('/orders',[OrdersController::class,'store']);

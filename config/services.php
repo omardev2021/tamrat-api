@@ -31,4 +31,13 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'moyasar' => [
+        'secret' => env('MOYASAR_SECRET_KEY'),
+    ],
+
+    'ga4' => [
+        'measurement_id' => env('GA4_MEASUREMENT_ID'),
+        'mp_secret' => env('GA4_MP_API_SECRET'),
+    ],
+
 ];

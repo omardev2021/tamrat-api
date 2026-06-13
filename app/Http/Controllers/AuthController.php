@@ -62,26 +62,27 @@ class AuthController extends Controller
     }
 
 
-    public function sendSMS($phone,$msg) {
+    public function sendSMS($phone, $msg) {
+        $sid   = env('TWILIO_SID');
+        $token = env('TWILIO_TOKEN');
+        $from  = env('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886');
 
-        $url = "http://sms.connectsaudi.com/sendurl.aspx";
-        $user = "Tamrattr";
-        $pwd = "jmbm44p6";
-        $senderid = "Advance Dig"; // Include whitespace in the senderid value
-        $countryCode = "966";
-        $mobileno = $phone;
-        $msgtext = $msg;
+        $phone = preg_replace('/^0+/', '', $phone);
+        if (!str_starts_with($phone, '966')) {
+            $phone = '966' . $phone;
+        }
+        $to = 'whatsapp:+' . $phone;
 
+        $url  = 'https://api.twilio.com/2010-04-01/Accounts/' . $sid . '/Messages.json';
+        $data = http_build_query(['From' => $from, 'To' => $to, 'Body' => $msg]);
 
-        $senderid = urlencode($senderid);
-        $msgtext = urlencode($msgtext);
-        $fullUrl = "$url?user=$user&pwd=$pwd&senderid=$senderid&CountryCode=$countryCode&mobileno=$mobileno&msgtext=$msgtext";
-
-        $ch = curl_init($fullUrl);
+        $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $curl_scraped_page = curl_exec($ch);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        curl_setopt($ch, CURLOPT_USERPWD, $sid . ':' . $token);
+        curl_exec($ch);
         curl_close($ch);
-
     }
 
 
@@ -145,29 +146,14 @@ class AuthController extends Controller
     }
     
 
-    private function send_email_helper($email, $otp)
-    {
-      
-        $mj = new Client('0f2691fc2f219fbd06b37f24c25ba639', '18133e418df9bfe5df35ab7b3f5d5416');
-        $body = [
-            'FromEmail' => "info@tamratdates.com",
-            'FromName' => "تمرات",
-            'Subject' => "رمز التحقق",
-            'Text-part' => "رمز التحقق الخاص بك في تمرات",
-            'Html-part' => "<h3>رمز التحقق الخاص بك في تمرات هو " . $otp . "</h3>",
-            'Recipients' => [
-                [
-                    'Email' => $email,
-                ],
-            ],
-        ];
-
-        // Send the email
-        $response = $mj->post(Resources::$Email, ['body' => $body]);
-
-        // Check if the email sending was successful
-        if (!$response->success()) {
-            throw new \Exception('Email sending failed');
+    private function send_email_helper($email, $otp) {
+        // Look up user phone by email and send OTP via WhatsApp
+        $user = \App\Models\User::where('email', $email)->first();
+        if ($user && $user->phone) {
+            $msg = 'رمز التحقق الخاص بك في تمرات هو ' . $otp;
+            $this->sendSMS($user->phone, $msg);
+        } else {
+            throw new \Exception('User phone not found for WhatsApp delivery');
         }
     }
 
@@ -213,5 +199,33 @@ class AuthController extends Controller
 
     }
 
+
+
+    public function update_user_data(Request $request) {
+        try {
+            if ($request->mode === 'email') {
+                $user = User::where('email', $request->email)->first();
+                if (!$user) return response()->json(['message' => 'User not found'], 404);
+                $user->name  = $request->name;
+                $user->phone = preg_replace('/^0+/', '', $request->phone ?? '');
+                $user->profile = 'complete';
+                $user->save();
+            } else {
+                $user = User::where('phone', preg_replace('/^0+/', '', $request->phone ?? ''))->first();
+                if (!$user) return response()->json(['message' => 'User not found'], 404);
+                $user->name  = $request->name;
+                $user->email = $request->email;
+                $user->profile = 'complete';
+                $user->save();
+            }
+            return response()->json([
+                'user'  => $user,
+                'token' => $user->createToken('API TOKEN FOR ' . $user->name)->plainTextToken,
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error($e->getMessage());
+            return response()->json(['error' => 'Update failed'], 500);
+        }
+    }
 
 }

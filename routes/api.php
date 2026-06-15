@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\OrdersController;
+use App\Http\Controllers\FeedController;
 use App\Http\Controllers\MoyasarController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\MyFatoorahController;
@@ -51,6 +52,7 @@ Route::post('/products/shopping/search',[ProductsController::class,'search']);
 Route::post('/users/login',[AuthController::class,'login']);
 Route::post('/users/register',[AuthController::class,'register']);
 Route::get('/orders/{id}',[OrdersController::class,'show']);
+Route::get('/merchant-feed',[FeedController::class,'google']);
 
 Route::post('/users/sms',[AuthController::class,'send_sms']);
 

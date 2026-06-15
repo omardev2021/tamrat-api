@@ -2,6 +2,9 @@
 
 return [
 
+    // Internal address that receives a copy (BCC) of every order confirmation.
+    'order_notify' => env('ORDER_NOTIFY_EMAIL', env('MAIL_FROM_ADDRESS')),
+
     /*
     |--------------------------------------------------------------------------
     | Default Mailer

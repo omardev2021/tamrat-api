@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -72,8 +73,35 @@ class MoyasarController extends Controller
         // Fire the GA4 purchase server-side (Measurement Protocol) so revenue is
         // captured for every paid order regardless of ad blockers / client issues.
         $this->sendGa4Purchase($order, $request);
+        $this->sendOrderConfirmationEmail($order);
 
         return response()->json(['message' => 'paid successfully', 'status' => 'paid']);
+    }
+
+    /**
+     * Email the customer their order confirmation (and BCC the store owner).
+     * Best-effort: failures are logged and never break payment confirmation.
+     */
+    private function sendOrderConfirmationEmail(Order $order): void
+    {
+        try {
+            $items = OrderItem::where('order_id', $order->id)->with('product')->get();
+            $notify = config('mail.order_notify');
+            $mailable = new \App\Mail\OrderConfirmation($order, $items);
+
+            if (!empty($order->email)) {
+                $m = Mail::to($order->email);
+                if ($notify) {
+                    $m->bcc($notify);
+                }
+                $m->send($mailable);
+            } elseif ($notify) {
+                // Guest order with no email — at least notify the store owner.
+                Mail::to($notify)->send($mailable);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Order confirmation email failed for order ' . $order->id . ': ' . $e->getMessage());
+        }
     }
 
     /**

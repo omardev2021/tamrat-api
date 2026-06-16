@@ -14,6 +14,9 @@ class Kernel extends ConsoleKernel
     {
         $schedule->command('retention:reorder-reminders')
                  ->timezone('Asia/Riyadh')->dailyAt('11:00');
+
+        $schedule->command('retention:review-requests')
+                 ->timezone('Asia/Riyadh')->dailyAt('11:30');
     }
 
     /**

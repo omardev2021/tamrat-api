@@ -35,6 +35,10 @@ return [
         'secret' => env('MOYASAR_SECRET_KEY'),
     ],
 
+    'tamrat' => [
+        'review_url' => env('REVIEW_URL', 'https://wa.me/966548036906'),
+    ],
+
     'brevo' => [
         'key' => env('BREVO_API_KEY'),
         'list_id' => env('BREVO_LIST_ID'),

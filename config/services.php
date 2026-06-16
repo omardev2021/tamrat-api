@@ -35,6 +35,11 @@ return [
         'secret' => env('MOYASAR_SECRET_KEY'),
     ],
 
+    'brevo' => [
+        'key' => env('BREVO_API_KEY'),
+        'list_id' => env('BREVO_LIST_ID'),
+    ],
+
     'ga4' => [
         'measurement_id' => env('GA4_MEASUREMENT_ID'),
         'mp_secret' => env('GA4_MP_API_SECRET'),

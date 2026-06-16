@@ -74,6 +74,7 @@ class MoyasarController extends Controller
         // captured for every paid order regardless of ad blockers / client issues.
         $this->sendGa4Purchase($order, $request);
         $this->sendOrderConfirmationEmail($order);
+        (new \App\Services\BrevoService())->upsertCustomer($order);
 
         return response()->json(['message' => 'paid successfully', 'status' => 'paid']);
     }

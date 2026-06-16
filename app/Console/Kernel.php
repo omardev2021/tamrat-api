@@ -12,7 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->command('retention:reorder-reminders')
+                 ->timezone('Asia/Riyadh')->dailyAt('11:00');
     }
 
     /**

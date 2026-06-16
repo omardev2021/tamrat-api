@@ -17,6 +17,12 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('retention:review-requests')
                  ->timezone('Asia/Riyadh')->dailyAt('11:30');
+
+        $schedule->command('retention:win-back')
+                 ->timezone('Asia/Riyadh')->dailyAt('12:00');
+
+        $schedule->command('retention:abandoned-cart')
+                 ->hourly();
     }
 
     /**

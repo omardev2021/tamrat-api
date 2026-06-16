@@ -37,6 +37,7 @@ return [
 
     'tamrat' => [
         'review_url' => env('REVIEW_URL', 'https://wa.me/966548036906'),
+        'winback_code' => env('WINBACK_CODE', ''),
     ],
 
     'brevo' => [

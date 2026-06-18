@@ -66,17 +66,98 @@ class MoyasarController extends Controller
             return response()->json(['message' => 'Payment does not belong to this order', 'status' => 'mismatch'], 422);
         }
 
-        $order->isPaid = 1;
-        $order->payment_id = $request->payment_id;
-        $order->save();
-
-        // Fire the GA4 purchase server-side (Measurement Protocol) so revenue is
-        // captured for every paid order regardless of ad blockers / client issues.
-        $this->sendGa4Purchase($order, $request);
-        $this->sendOrderConfirmationEmail($order);
-        (new \App\Services\BrevoService())->upsertCustomer($order);
+        $this->markOrderPaid($order, $request->payment_id, $request);
 
         return response()->json(['message' => 'paid successfully', 'status' => 'paid']);
+    }
+
+    /**
+     * Moyasar server-to-server webhook (payment_paid). The authoritative confirmation
+     * for WhatsApp orders — fires even if the customer never returns to the success page.
+     * Configure the URL + a shared secret_token in the Moyasar dashboard.
+     */
+    public function webhook(Request $request)
+    {
+        $expected = config('services.moyasar.webhook_secret');
+        if ($expected && !hash_equals((string) $expected, (string) $request->input('secret_token'))) {
+            return response()->json(['message' => 'unauthorized'], 401);
+        }
+
+        $payment   = (array) $request->input('data', []);
+        $paymentId = $payment['id'] ?? null;
+        $orderId   = $payment['metadata']['order_id'] ?? null;
+        if (!$paymentId || !$orderId) return response()->json(['message' => 'ignored'], 200);
+
+        $order = Order::find($orderId);
+        if (!$order) return response()->json(['message' => 'order not found'], 200);
+
+        // Never trust the webhook body alone — re-fetch the payment with the secret key.
+        $secret = config('services.moyasar.secret');
+        if (!$secret) return response()->json(['message' => 'not configured'], 200);
+        $resp = Http::withBasicAuth($secret, '')->acceptJson()
+            ->get('https://api.moyasar.com/v1/payments/' . urlencode($paymentId));
+        if (!$resp->ok()) return response()->json(['message' => 'fetch failed'], 200);
+        $p = $resp->json();
+
+        if (($p['status'] ?? null) !== 'paid') return response()->json(['message' => 'not paid'], 200);
+        $expectedAmount = (int) round(((float) $order->totalPrice) * 100);
+        if ((int) ($p['amount'] ?? 0) !== $expectedAmount || ($p['currency'] ?? '') !== 'SAR') {
+            return response()->json(['message' => 'amount mismatch'], 200);
+        }
+
+        $this->markOrderPaid($order, (string) $paymentId, $request);
+        return response()->json(['message' => 'ok'], 200);
+    }
+
+    /**
+     * Mark an order paid + fire side-effects EXACTLY ONCE (atomic guard against the
+     * success-page verify and the webhook racing). Side-effects: GA4 purchase, Brevo,
+     * confirmation email, and — for WhatsApp orders — a "paid ✅" push into the chat.
+     */
+    private function markOrderPaid(Order $order, string $paymentId, ?Request $request = null): void
+    {
+        // Already settled with this payment → nothing to do.
+        if ((int) $order->isPaid === 1 && $order->payment_id === $paymentId) return;
+
+        // Atomic: only the first caller flips 0→1 and runs side-effects.
+        $won = Order::where('id', $order->id)->where('isPaid', 0)
+            ->update(['isPaid' => 1, 'payment_id' => $paymentId]);
+        if (!$won) return;
+
+        $order->refresh();
+        $this->sendGa4Purchase($order, $request ?? request());
+        $this->sendOrderConfirmationEmail($order);
+        try { (new \App\Services\BrevoService())->upsertCustomer($order); } catch (\Throwable $e) {
+            Log::warning('Brevo upsert failed for order ' . $order->id . ': ' . $e->getMessage());
+        }
+
+        if ($order->source === 'whatsapp' && $order->conversation_id) {
+            $this->pushWhatsAppConfirmation($order);
+        }
+    }
+
+    /** Post a "paid ✅" message into the Chatwoot thread that created this order. */
+    private function pushWhatsAppConfirmation(Order $order): void
+    {
+        try {
+            $base  = rtrim((string) config('services.chatwoot.base_url'), '/');
+            $token = (string) config('services.chatwoot.api_token');
+            $acct  = config('services.chatwoot.account_id');
+            if (!$base || !$token) return;
+
+            $total = rtrim(rtrim(number_format((float) $order->totalPrice, 2, '.', ''), '0'), '.');
+            $name  = trim((string) $order->name);
+            $msg = "تم استلام دفعتك ✅\n"
+                . "طلبك رقم #{$order->id} بإجمالي {$total} ر.س." . ($name ? " شكراً {$name}!" : ' شكراً لك!') . " 🌴\n"
+                . "بيوصلك خلال ٢–٥ أيام، وبنحدّثك أول ما يُشحن.";
+
+            Http::withHeaders(['api_access_token' => $token])->acceptJson()->timeout(15)
+                ->post("{$base}/api/v1/accounts/{$acct}/conversations/{$order->conversation_id}/messages", [
+                    'content' => $msg, 'message_type' => 'outgoing', 'private' => false,
+                ]);
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp paid-confirmation push failed for order ' . $order->id . ': ' . $e->getMessage());
+        }
     }
 
     /**

@@ -6,11 +6,13 @@ use App\Http\Controllers\ProductsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\OrdersController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\SocialController;
 use App\Http\Controllers\MoyasarController;
 use App\Http\Controllers\CouponController;
 use App\Http\Controllers\MyFatoorahController;
 use App\Http\Controllers\HelpersController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ChatwootBotController;
 
 
 /*
@@ -53,6 +55,10 @@ Route::post('/users/login',[AuthController::class,'login']);
 Route::post('/users/register',[AuthController::class,'register']);
 Route::get('/orders/{id}',[OrdersController::class,'show']);
 Route::get('/merchant-feed',[FeedController::class,'google']);
+Route::post('/social/upload-image',[SocialController::class,'uploadImage']);
+
+// Chatwoot Agent Bot webhook (Tamrat WhatsApp CS) — secret in the path; no auth middleware.
+Route::post('/chatwoot/webhook/{secret}',[ChatwootBotController::class,'webhook']);
 
 Route::post('/users/sms',[AuthController::class,'send_sms']);
 
@@ -78,6 +84,8 @@ Route::get('/orders/admin/newsletters',[AdminController::class,'newsletters']);
 Route::post('/users/update-user-data',[AuthController::class,'update_user_data']);
 Route::post('/orders/guest',[OrdersController::class,'storeGuest']);
 Route::post('/payments/verify',[MoyasarController::class,'verify']);
+// Moyasar server-to-server webhook (payment_paid) — authenticated by secret_token in the body.
+Route::post('/moyasar/webhook',[MoyasarController::class,'webhook']);
 Route::group(['middleware' => ['auth:sanctum']],function(){
 
 Route::post('/orders',[OrdersController::class,'store']);

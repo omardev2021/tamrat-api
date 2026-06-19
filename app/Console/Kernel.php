@@ -23,6 +23,11 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('retention:abandoned-cart')
                  ->hourly();
+
+        // WhatsApp predictive-replenishment + occasion nudges (gated: only sends
+        // when services.lifecycle.wa_enabled + an approved template are set).
+        $schedule->command('lifecycle:whatsapp --cooldown=21')
+                 ->timezone('Asia/Riyadh')->dailyAt('10:30');
     }
 
     /**

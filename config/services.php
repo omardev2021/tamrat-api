@@ -46,6 +46,13 @@ return [
         'store_url' => env('STORE_URL', 'https://tamratdates.com'),
     ],
 
+    // WhatsApp lifecycle/retention nudges. Sending is OFF until an approved
+    // template exists — set LIFECYCLE_WA_ENABLED=true + LIFECYCLE_WA_TEMPLATE.
+    'lifecycle' => [
+        'wa_enabled' => env('LIFECYCLE_WA_ENABLED', false),
+        'template_name' => env('LIFECYCLE_WA_TEMPLATE'),
+    ],
+
     'brevo' => [
         'key' => env('BREVO_API_KEY'),
         'list_id' => env('BREVO_LIST_ID'),

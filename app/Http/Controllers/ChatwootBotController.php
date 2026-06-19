@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Services\CommerceService;
+use App\Models\CommerceEvent;
 
 /**
  * Chatwoot Agent Bot webhook for Tamrat WhatsApp customer service.
@@ -350,10 +351,19 @@ class ChatwootBotController extends Controller
         try {
             switch ($name) {
                 case 'search_products':
+                    $this->logEvent([
+                        'type' => 'search',
+                        'occasion' => $input['occasion'] ?? null,
+                        'category' => isset($input['category']) ? (string) $input['category'] : null,
+                        'price_point' => isset($input['max_price']) ? (float) $input['max_price'] : null,
+                        'query' => $input['query'] ?? null,
+                        'lang' => $this->detectLang(($input['query'] ?? '') . ' ' . ($input['occasion'] ?? '')),
+                    ], $customerPhone, $conversationId);
                     return json_encode($svc->searchProducts($input), JSON_UNESCAPED_UNICODE);
 
                 case 'get_product':
                     $p = $svc->getProduct($input['id'] ?? $input['slug'] ?? null);
+                    if ($p) $this->logEvent(['type'=>'product_view','product_id'=>$p['id']??null,'occasion'=>$p['occasion']??null], $customerPhone, $conversationId);
                     return $p ? json_encode($p, JSON_UNESCAPED_UNICODE) : 'Product not found.';
 
                 case 'get_shipping_options':
@@ -368,6 +378,9 @@ class ChatwootBotController extends Controller
                         'email'   => (string) ($input['email'] ?? ''),
                     ];
                     $res = $svc->createOrder((array) ($input['items'] ?? []), $customer, $conversationId ? (int) $conversationId : null);
+                    if (!empty($res['order_id'])) {
+                        $this->logEvent(['type'=>'order_created','order_id'=>(int)$res['order_id'],'converted'=>true,'price_point'=>$res['total_sar']??null], $customerPhone, $conversationId);
+                    }
                     return json_encode($res, JSON_UNESCAPED_UNICODE);
 
                 case 'create_pay_link':
@@ -388,6 +401,19 @@ class ChatwootBotController extends Controller
         return 'Unknown commerce tool.';
     }
 
+    /** Data-flywheel logging — best-effort, never breaks the bot. */
+    private function logEvent(array $a, ?string $phone, $conversationId): void
+    {
+        $a['conversation_id'] = $conversationId ? (int) $conversationId : null;
+        if ($phone) { $a['customer_ref'] = substr(preg_replace('/\D/', '', $phone), -9); }
+        CommerceEvent::record($a);
+    }
+
+    private function detectLang(string $t): string
+    {
+        return preg_match('/\p{Arabic}/u', $t) ? 'ar' : 'en';
+    }
+
     // ── Escalation ─────────────────────────────────────────────────────────────
 
     /** Open + label + flag the conversation and drop a private summary. Team routing is done in finalizeEscalation(). */
@@ -402,6 +428,8 @@ class ChatwootBotController extends Controller
         // Private note: context for whoever picks it up.
         $note = "🤖→👤 Handed off by the assistant\nReason: {$reason}" . ($summary ? "\n{$summary}" : '');
         $this->reply($accountId, $conversationId, $note, true);
+
+        CommerceEvent::record(['type'=>'objection','conversation_id'=>(int)$conversationId,'category'=>$this->labelFor($reason),'meta'=>['reason'=>$reason,'summary'=>$summary],'created_at'=>now()]);
 
         $this->escalated = true;
         Log::info('[ChatwootBot] escalated', ['conversation' => $conversationId, 'reason' => $reason]);

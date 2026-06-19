@@ -131,6 +131,13 @@ class MoyasarController extends Controller
             Log::warning('Brevo upsert failed for order ' . $order->id . ': ' . $e->getMessage());
         }
 
+        \App\Models\CommerceEvent::record([
+            'type' => 'paid', 'converted' => true, 'order_id' => $order->id,
+            'conversation_id' => $order->conversation_id ? (int) $order->conversation_id : null,
+            'customer_ref' => $order->phone ? substr(preg_replace('/\D/', '', (string) $order->phone), -9) : null,
+            'price_point' => (float) $order->totalPrice, 'meta' => ['source' => $order->source],
+        ]);
+
         if ($order->source === 'whatsapp' && $order->conversation_id) {
             $this->pushWhatsAppConfirmation($order);
         }

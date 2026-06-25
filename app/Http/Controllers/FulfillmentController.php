@@ -166,16 +166,22 @@ class FulfillmentController extends Controller
     }
 
     /**
-     * Shared-secret gate. Returns a 401 response to short-circuit on failure,
-     * or null when authorised. Fails closed when no secret is configured.
+     * Access gate. Authorised when EITHER the caller is an authenticated admin
+     * (Sanctum user with type 13 — used by the admin UI's logged-in token) OR a
+     * valid shared secret is presented (X-Admin-Secret — for CLI/server-to-server
+     * and a future carrier API). Returns a 401 response on failure, null on pass.
      */
     private function guard(Request $request)
     {
-        $secret = config('services.admin.secret');
-        if (!$secret || !hash_equals((string) $secret, (string) $request->header('X-Admin-Secret'))) {
-            return response()->json(['message' => 'unauthorized'], 401);
+        $user = auth('sanctum')->user();
+        if ($user && (int) $user->type === 13) {
+            return null;
         }
-        return null;
+        $secret = config('services.admin.secret');
+        if ($secret && hash_equals((string) $secret, (string) $request->header('X-Admin-Secret'))) {
+            return null;
+        }
+        return response()->json(['message' => 'unauthorized'], 401);
     }
 
     /** Build a customer-facing tracking URL for known carriers, or null. */

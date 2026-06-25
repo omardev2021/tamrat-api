@@ -74,11 +74,15 @@ Route::post('/users/contact',[HelpersController::class,'contact']);
 Route::post('/users/letter',[HelpersController::class,'letter']);
 
 
-Route::get('/orders',[OrdersController::class,'all']);
-
-Route::get('/orders/admin/contacts',[AdminController::class,'contacts']);
-Route::get('/orders/admin/receipts',[AdminController::class,'receipts']);
-Route::get('/orders/admin/newsletters',[AdminController::class,'newsletters']);
+// Admin-only data endpoints — were UNAUTHENTICATED (exposed all customer PII).
+// Now require an authenticated admin (Sanctum + type 13). The admin frontend
+// sends the logged-in user's bearer token (see apiSlice prepareHeaders).
+Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('/orders', [OrdersController::class, 'all']);
+    Route::get('/orders/admin/contacts', [AdminController::class, 'contacts']);
+    Route::get('/orders/admin/receipts', [AdminController::class, 'receipts']);
+    Route::get('/orders/admin/newsletters', [AdminController::class, 'newsletters']);
+});
 
 
 

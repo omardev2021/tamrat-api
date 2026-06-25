@@ -21,7 +21,7 @@ class ReviewRequest extends Mailable
 
     public function build()
     {
-        return $this->subject('كيف كانت تمورك؟ 🌟 شاركنا رأيك | تمرات')
+        return $this->subject('مذاقٌ يستحقّ العودة إليه 🌟 | تمرات')
             ->view('emails.review-request');
     }
 }

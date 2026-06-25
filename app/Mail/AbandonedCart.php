@@ -23,7 +23,7 @@ class AbandonedCart extends Mailable
 
     public function build()
     {
-        return $this->subject('سلة التمر بانتظارك 🛒 | تمرات')
+        return $this->subject('احتفظنا لك بها كما تركتها | تمرات')
             ->view('emails.abandoned-cart');
     }
 }

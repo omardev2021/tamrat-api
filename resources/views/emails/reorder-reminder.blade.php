@@ -9,7 +9,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <title>وقت التجديد</title>
+    <title>لحظةٌ تستحقّ أن تتكرّر</title>
 </head>
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,'Segoe UI',Tahoma,sans-serif;color:#1a1a1a;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:24px 12px;">
@@ -19,16 +19,16 @@
 
                 <tr>
                     <td align="center" style="padding:34px 28px 6px;">
-                        <div style="font-size:42px;line-height:1;">🌿</div>
+                        <div style="font-size:42px;line-height:1;">🌴</div>
                         <h1 style="font-size:23px;font-weight:bold;margin:14px 0 8px;color:#1a1a1a;">
-                            وقت تجديد المخزون يا {{ $name }}؟
+                            لحظةٌ تستحقّ أن تتكرّر يا {{ $name }}
                         </h1>
                         <p style="font-size:15px;line-height:1.8;color:#3d3d3d;margin:0;">
-                            مرّ نحو شهر على آخر طلب لك من تمرات.
+                            مرّ وقت على آخر علبة طلبتها… وطعمٌ بهذي الأصالة يصعب نسيانه 😋
                             @if($lastProduct)
-                                إذا قارب <strong>{{ $lastProduct }}</strong> على الانتهاء، جدّد مخزونك قبل أن ينفد 🌴
+                                لو قارب <strong>{{ $lastProduct }}</strong> على الانتهاء، رجّعه لمطبخك — طزاجة، حلاوة كراميل طبيعية، وطاقة تدوم بلا سكر مضاف.
                             @else
-                                إذا قاربت تمورك على الانتهاء، جدّد مخزونك قبل أن ينفد 🌴
+                                لو قاربت تمورك على الانتهاء، رجّعها لمطبخك — طزاجة، حلاوة كراميل طبيعية، وطاقة تدوم بلا سكر مضاف.
                             @endif
                         </p>
                     </td>
@@ -38,7 +38,7 @@
                     <td align="center" style="padding:18px 28px 6px;">
                         <a href="https://tamratdates.com/shopping"
                            style="display:inline-block;background:{{ $green }};color:#ffffff;text-decoration:none;font-size:16px;font-weight:bold;padding:14px 38px;border-radius:12px;">
-                            اطلب مرة أخرى
+                            أعِد طلبك المفضّل
                         </a>
                     </td>
                 </tr>

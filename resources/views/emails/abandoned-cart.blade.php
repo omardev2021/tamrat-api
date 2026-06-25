@@ -9,7 +9,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <title>سلتك بانتظارك</title>
+    <title>احتفظنا لك بها كما تركتها</title>
 </head>
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,'Segoe UI',Tahoma,sans-serif;color:#1a1a1a;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:24px 12px;">
@@ -21,10 +21,11 @@
                     <td align="center" style="padding:34px 28px 4px;">
                         <div style="font-size:40px;line-height:1;">🛒</div>
                         <h1 style="font-size:23px;font-weight:bold;margin:14px 0 8px;color:#1a1a1a;">
-                            نسيت شيئًا يا {{ $name }}؟
+                            تمورٌ مختارة بعناية، تليق بمن يميّز التميّز
                         </h1>
                         <p style="font-size:15px;line-height:1.8;color:#3d3d3d;margin:0;">
-                            سلّتك ما زالت محفوظة — أكمل طلبك قبل أن تنفد الكمية 🌿
+                            احتفظنا لك بها كما تركتها يا {{ $name }} 🌴
+                            أكمل طلبك قبل أن تنفد الكمية.
                         </p>
                     </td>
                 </tr>

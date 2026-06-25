@@ -21,7 +21,7 @@ class ReorderReminder extends Mailable
 
     public function build()
     {
-        return $this->subject('وقت تجديد مخزون التمر؟ 🌿 | تمرات')
+        return $this->subject('لحظةٌ تستحقّ أن تتكرّر 🌴 | تمرات')
             ->view('emails.reorder-reminder');
     }
 }

@@ -17,3 +17,9 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# backup snapshots (never commit — may contain secrets)
+*.bak-*
+.env.bak*
+# runtime social-image uploads (UUID-named, ephemeral)
+/public/images/social

@@ -21,7 +21,7 @@ class WinBack extends Mailable
 
     public function build()
     {
-        return $this->subject('اشتقنا لك 🌿 | تمرات')
+        return $this->subject('تمورٌ مختارة بعناية، تليق بمن يميّز التميّز 🌴 | تمرات')
             ->view('emails.winback');
     }
 }

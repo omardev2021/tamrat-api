@@ -40,6 +40,23 @@ return [
         'upload_secret' => env('SOCIAL_UPLOAD_SECRET'),
     ],
 
+    // Shared secret for operator/admin endpoints (fulfillment ops). Fails closed:
+    // the endpoints deny all requests when this is unset.
+    'admin' => [
+        'secret' => env('ADMIN_SECRET'),
+    ],
+
+    // Carrier → customer tracking-URL templates ({awb} is replaced with the
+    // tracking number). Matched on a substring of the carrier name. Verify/extend
+    // these for the courier you actually use; an unknown carrier just omits the link.
+    'carriers' => [
+        'smsa'       => env('TRACK_URL_SMSA', 'https://www.smsaexpress.com/track?tracknumbers={awb}'),
+        'aramex'     => env('TRACK_URL_ARAMEX', 'https://www.aramex.com/track/results?ShipmentNumber={awb}'),
+        'dhl'        => env('TRACK_URL_DHL', 'https://www.dhl.com/sa-en/home/tracking.html?tracking-id={awb}'),
+        'spl'        => env('TRACK_URL_SPL', 'https://splonline.com.sa/en/track-and-trace/?trackingNumber={awb}'),
+        'saudi post' => env('TRACK_URL_SAUDIPOST', 'https://splonline.com.sa/en/track-and-trace/?trackingNumber={awb}'),
+    ],
+
     'tamrat' => [
         'review_url' => env('REVIEW_URL', 'https://wa.me/966548036906'),
         'winback_code' => env('WINBACK_CODE', ''),

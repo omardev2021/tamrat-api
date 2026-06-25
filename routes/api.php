@@ -75,9 +75,12 @@ Route::post('/users/letter',[HelpersController::class,'letter']);
 
 
 // Admin-only data endpoints — were UNAUTHENTICATED (exposed all customer PII).
-// Now require an authenticated admin (Sanctum + type 13). The admin frontend
-// sends the logged-in user's bearer token (see apiSlice prepareHeaders).
-Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+// Now require an authenticated admin (type 13). EnsureAdmin resolves the Sanctum
+// bearer token itself and returns clean 401/403 JSON (we deliberately do NOT add
+// the auth:sanctum middleware — its unauthenticated path redirects to a missing
+// 'login' route and 500s on a JSON API). The admin frontend sends the logged-in
+// user's token via apiSlice prepareHeaders.
+Route::middleware(['admin'])->group(function () {
     Route::get('/orders', [OrdersController::class, 'all']);
     Route::get('/orders/admin/contacts', [AdminController::class, 'contacts']);
     Route::get('/orders/admin/receipts', [AdminController::class, 'receipts']);

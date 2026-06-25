@@ -119,9 +119,11 @@ class MoyasarController extends Controller
         // Already settled with this payment → nothing to do.
         if ((int) $order->isPaid === 1 && $order->payment_id === $paymentId) return;
 
-        // Atomic: only the first caller flips 0→1 and runs side-effects.
+        // Atomic: only the first caller flips 0→1 and runs side-effects. The same
+        // flip drops the order into the fulfillment queue ('pending') so a paid order
+        // can never sit unshipped without surfacing for the operator.
         $won = Order::where('id', $order->id)->where('isPaid', 0)
-            ->update(['isPaid' => 1, 'payment_id' => $paymentId]);
+            ->update(['isPaid' => 1, 'payment_id' => $paymentId, 'fulfillment_status' => 'pending']);
         if (!$won) return;
 
         $order->refresh();

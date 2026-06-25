@@ -13,6 +13,7 @@ use App\Http\Controllers\MyFatoorahController;
 use App\Http\Controllers\HelpersController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ChatwootBotController;
+use App\Http\Controllers\FulfillmentController;
 
 
 /*
@@ -86,6 +87,13 @@ Route::post('/orders/guest',[OrdersController::class,'storeGuest']);
 Route::post('/payments/verify',[MoyasarController::class,'verify']);
 // Moyasar server-to-server webhook (payment_paid) — authenticated by secret_token in the body.
 Route::post('/moyasar/webhook',[MoyasarController::class,'webhook']);
+
+// Fulfillment ops — gated by a shared secret (X-Admin-Secret), enforced inside
+// the controller (fails closed if ADMIN_SECRET is unset).
+Route::get('/fulfillment/queue',[FulfillmentController::class,'queue']);
+Route::post('/fulfillment/ship',[FulfillmentController::class,'markShipped']);
+Route::post('/fulfillment/delivered',[FulfillmentController::class,'markDelivered']);
+
 Route::group(['middleware' => ['auth:sanctum']],function(){
 
 Route::post('/orders',[OrdersController::class,'store']);

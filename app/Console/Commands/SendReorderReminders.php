@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Mail\ReorderReminder;
+use App\Services\RetentionGuard;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
@@ -45,6 +46,12 @@ class SendReorderReminders extends Command
             if (isset($seen[$email])) {
                 $o->reorder_reminder_sent_at = now();
                 $o->save();
+                continue;
+            }
+
+            // Master frequency cap: skip if this customer got another lifecycle
+            // email recently. Do NOT mark sent → stays eligible once the gap passes.
+            if (RetentionGuard::recentlyContacted($o->email)) {
                 continue;
             }
 

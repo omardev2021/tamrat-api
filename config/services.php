@@ -61,6 +61,9 @@ return [
         'review_url' => env('REVIEW_URL', 'https://wa.me/966548036906'),
         'winback_code' => env('WINBACK_CODE', ''),
         'store_url' => env('STORE_URL', 'https://tamratdates.com'),
+        // Master frequency cap: minimum days between any two lifecycle emails to
+        // the same customer (reorder/review/win-back). 0 disables the cap.
+        'retention_min_gap_days' => env('RETENTION_MIN_GAP_DAYS', 5),
     ],
 
     // WhatsApp lifecycle/retention nudges. Sending is OFF until an approved

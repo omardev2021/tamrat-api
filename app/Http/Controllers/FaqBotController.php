@@ -25,6 +25,11 @@ class FaqBotController extends Controller
 {
     private const MAX_HISTORY   = 12;  // visitor+bot turns accepted from the client
     private const MAX_TOOL_HOPS = 2;   // read-only lookups per reply
+    private const WA_NUMBER     = '966548036906';
+
+    // Set when the model hands off — a pre-filled wa.me link that carries the
+    // visitor's context into the WhatsApp commerce agent.
+    private ?string $handoffUrl = null;
 
     public function chat(Request $request)
     {
@@ -52,7 +57,10 @@ class FaqBotController extends Controller
             $reply = 'صار عندنا عطل بسيط 🙏 تقدر تتواصل معنا مباشرة على واتساب ونساعدك.';
         }
 
-        return response()->json(['reply' => $reply], 200);
+        return response()->json([
+            'reply'   => $reply,
+            'handoff' => $this->handoffUrl ? ['url' => $this->handoffUrl] : null,
+        ], 200);
     }
 
     // ── Claude reply generation (forked pattern, trimmed) ────────────────────────
@@ -129,45 +137,77 @@ class FaqBotController extends Controller
 
     private function tools(): array
     {
-        return [[
-            'name'        => 'search_products',
-            'description' => "Search Tamrat's live dates catalog to answer 'do you have X / how much / what varieties' "
-                . "questions. Returns products with live prices and stock. Only mention products and prices from these "
-                . "results — never invent them. This is READ-ONLY: you cannot place orders here; buying happens on WhatsApp.",
-            'input_schema' => [
-                'type'       => 'object',
-                'properties' => [
-                    'query'    => ['type' => 'string', 'description' => 'Free text, e.g. a variety name. Optional.'],
-                    'category' => ['type' => 'string', 'description' => 'One of: ajwa, sukari, sagie, mabroom, majhool. Optional.'],
+        return [
+            [
+                'name'        => 'search_products',
+                'description' => "Search Tamrat's live dates catalog to answer 'do you have X / how much / what varieties' "
+                    . "questions. Returns products with live prices and stock. Only mention products and prices from these "
+                    . "results — never invent them. This is READ-ONLY: you cannot place orders here; buying happens on WhatsApp.",
+                'input_schema' => [
+                    'type'       => 'object',
+                    'properties' => [
+                        'query'    => ['type' => 'string', 'description' => 'Free text, e.g. a variety name. Optional.'],
+                        'category' => ['type' => 'string', 'description' => 'One of: ajwa, sukari, sagie, mabroom, majhool. Optional.'],
+                    ],
+                    'required' => [],
                 ],
-                'required' => [],
             ],
-        ]];
+            [
+                'name'        => 'handoff_to_whatsapp',
+                'description' => "Hand the visitor to the WhatsApp team/agent WITH context. Call this whenever they want to "
+                    . "place an order or buy now, ask about an existing order (status/tracking/change), a refund/return/"
+                    . "cancellation, a damaged/wrong/missing item or complaint, wholesale/bulk, or gift wrapping. Provide a short "
+                    . "FIRST-PERSON Arabic message the VISITOR would send to open that WhatsApp chat, carrying what they want "
+                    . "(e.g. the variety + quantity, or their question). After calling this, write ONE short warm line telling them "
+                    . "to tap the WhatsApp button below — never paste a link yourself.",
+                'input_schema' => [
+                    'type'       => 'object',
+                    'properties' => [
+                        'message' => [
+                            'type'        => 'string',
+                            'description' => 'A concise first-person Arabic message the visitor sends to start the WhatsApp chat, '
+                                . 'carrying their context. e.g. "مرحبا، مهتم بتمر العجوة كيلو وحاب أكمل الطلب".',
+                        ],
+                    ],
+                    'required' => ['message'],
+                ],
+            ],
+        ];
     }
 
     private function runTool(string $name, array $input): string
     {
-        if ($name !== 'search_products') return 'Unknown tool.';
-        try {
-            $svc = new CommerceService();
-            $rows = $svc->searchProducts([
-                'query'    => $input['query'] ?? null,
-                'category' => $input['category'] ?? null,
-                'in_stock' => true,
-            ]);
-            return json_encode($rows, JSON_UNESCAPED_UNICODE) ?: '[]';
-        } catch (\Throwable $e) {
-            Log::error('[FaqBot] search_products failed: ' . $e->getMessage());
-            return 'Search is unavailable right now — suggest they browse the site or ask on WhatsApp.';
+        if ($name === 'handoff_to_whatsapp') {
+            $msg = trim((string) ($input['message'] ?? ''));
+            if ($msg === '') $msg = 'مرحبا، كنت أتصفح موقع تمرات وحاب أكمل معكم.';
+            $this->handoffUrl = 'https://wa.me/' . self::WA_NUMBER . '?text=' . rawurlencode($msg);
+            return 'Handoff link prepared and shown as the WhatsApp button. Now write ONE short warm line in the '
+                . "visitor's language telling them to tap the WhatsApp button below to continue. Do NOT include any URL.";
         }
+
+        if ($name === 'search_products') {
+            try {
+                $svc = new CommerceService();
+                $rows = $svc->searchProducts([
+                    'query'    => $input['query'] ?? null,
+                    'category' => $input['category'] ?? null,
+                    'in_stock' => true,
+                ]);
+                return json_encode($rows, JSON_UNESCAPED_UNICODE) ?: '[]';
+            } catch (\Throwable $e) {
+                Log::error('[FaqBot] search_products failed: ' . $e->getMessage());
+                return 'Search is unavailable right now — suggest they browse the site or ask on WhatsApp.';
+            }
+        }
+
+        return 'Unknown tool.';
     }
 
     // ── Knowledge / prompt ───────────────────────────────────────────────────────
 
     private function systemPrompt(): string
     {
-        $catalog  = $this->catalog();
-        $whatsapp = 'https://wa.me/966548036906';
+        $catalog = $this->catalog();
         return <<<PROMPT
 You are the friendly help assistant on the Tamrat website (تمرات / tamratdates.com), a premium Saudi dates online store. A visitor is chatting from the website (not WhatsApp). Your ONE job: answer common questions quickly and accurately, so they feel looked after. You do NOT take orders or payments here — buying, order status, and any problem are handled on WhatsApp by our team and full assistant.
 
@@ -188,14 +228,16 @@ Live catalog (use search_products for the current list, prices & stock — never
 # Answer these yourself
 Varieties & recommendations (use search_products), prices (from the tool), shipping fee/time, free-shipping threshold, payment methods, delivery area (KSA), what's a good gift vs daily eating, general product questions.
 
-# Send them to WhatsApp — do NOT try to resolve these here
-An EXISTING order's status / tracking / changes; a refund, return, or cancellation; a damaged/wrong/missing item or any complaint; actually placing an order or paying; wholesale/bulk/B2B; gift wrapping or special requests. For any of these, give one short helpful sentence and direct them to WhatsApp: {$whatsapp}
-Also, if someone clearly wants to buy now, tell them warmly they can complete it in seconds with our team on WhatsApp: {$whatsapp}
+# Hand off to WhatsApp — call handoff_to_whatsapp, do NOT resolve here, do NOT paste any link
+For any of these — placing an order / buying now; an EXISTING order's status, tracking, or change; a refund, return, or cancellation; a damaged/wrong/missing item or complaint; wholesale/bulk/B2B; gift wrapping or special requests:
+1) call handoff_to_whatsapp with a short first-person Arabic message the visitor would send, carrying their context (the variety + quantity they wanted, or their question);
+2) then write ONE short warm line telling them to tap the WhatsApp button below to continue.
+Never paste a URL yourself — the button carries the pre-filled message.
 
 # Hard rules
 - Only state facts listed above or returned by the tool. Never guess prices, stock, policies, or delivery specifics.
 - Never ask for or accept card details or personal addresses here.
-- Keep it accurate and brief. When in doubt, point to WhatsApp.
+- Keep it accurate and brief. When in doubt, hand off via handoff_to_whatsapp.
 PROMPT;
     }
 

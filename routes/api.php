@@ -13,6 +13,7 @@ use App\Http\Controllers\MyFatoorahController;
 use App\Http\Controllers\HelpersController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ChatwootBotController;
+use App\Http\Controllers\FaqBotController;
 use App\Http\Controllers\FulfillmentController;
 
 
@@ -60,6 +61,10 @@ Route::post('/social/upload-image',[SocialController::class,'uploadImage']);
 
 // Chatwoot Agent Bot webhook (Tamrat WhatsApp CS) — secret in the path; no auth middleware.
 Route::post('/chatwoot/webhook/{secret}',[ChatwootBotController::class,'webhook']);
+
+// On-site FAQ answer-bot (Build 7) — public, rate-limited. Answers common questions
+// from the live catalog; sends orders/issues to WhatsApp.
+Route::post('/faq-bot',[FaqBotController::class,'chat'])->middleware('throttle:20,1');
 
 Route::post('/users/sms',[AuthController::class,'send_sms']);
 

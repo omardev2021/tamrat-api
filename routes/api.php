@@ -65,6 +65,8 @@ Route::post('/chatwoot/webhook/{secret}',[ChatwootBotController::class,'webhook'
 // On-site FAQ answer-bot (Build 7) — public, rate-limited. Answers common questions
 // from the live catalog; sends orders/issues to WhatsApp.
 Route::post('/faq-bot',[FaqBotController::class,'chat'])->middleware('throttle:20,1');
+// Content-signal insights (secret in path) — the questions visitors ask, grouped for content ideas.
+Route::get('/faq-insights/{secret}',[FaqBotController::class,'insights']);
 
 Route::post('/users/sms',[AuthController::class,'send_sms']);
 

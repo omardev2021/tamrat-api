@@ -57,9 +57,69 @@ class FaqBotController extends Controller
             $reply = 'صار عندنا عطل بسيط 🙏 تقدر تتواصل معنا مباشرة على واتساب ونساعدك.';
         }
 
+        // Content-signal flywheel: log the visitor's question so it feeds content ideas.
+        $lastUser = null;
+        for ($i = count($messages) - 1; $i >= 0; $i--) {
+            if (($messages[$i]['role'] ?? '') === 'user' && is_string($messages[$i]['content'] ?? null)) {
+                $lastUser = trim($messages[$i]['content']);
+                break;
+            }
+        }
+        if ($lastUser !== null && $lastUser !== '') {
+            \App\Models\CommerceEvent::record([
+                'type'      => 'faq_question',
+                'query'     => mb_substr($lastUser, 0, 500),
+                'lang'      => preg_match('/\p{Arabic}/u', $lastUser) ? 'ar' : 'en',
+                'converted' => $this->handoffUrl !== null, // question showed buying/handoff intent
+                'meta'      => ['handoff' => $this->handoffUrl !== null],
+            ]);
+        }
+
         return response()->json([
             'reply'   => $reply,
             'handoff' => $this->handoffUrl ? ['url' => $this->handoffUrl] : null,
+        ], 200);
+    }
+
+    /**
+     * Content-signal insights: the FAQ questions visitors actually ask, grouped by
+     * frequency, so Mission Control can surface them as content ideas. Secret in the path.
+     */
+    public function insights(Request $request, string $secret)
+    {
+        $expected = (string) config('services.faq.insights_secret');
+        if (!$expected || !hash_equals($expected, $secret)) {
+            return response()->json(['message' => 'unauthorized'], 401);
+        }
+
+        $days = min(90, max(1, (int) $request->query('days', 30)));
+        $rows = \App\Models\CommerceEvent::where('type', 'faq_question')
+            ->where('created_at', '>=', now()->subDays($days))
+            ->orderByDesc('created_at')
+            ->limit(2000)
+            ->get(['query', 'lang', 'converted', 'created_at']);
+
+        // Group by a normalised form of the question.
+        $groups = [];
+        foreach ($rows as $r) {
+            $q = trim((string) $r->query);
+            if ($q === '') continue;
+            $key = preg_replace('/\s+/u', ' ', mb_strtolower($q));
+            $key = trim(preg_replace('/[?؟.!،,]+$/u', '', $key));
+            if (!isset($groups[$key])) {
+                $groups[$key] = ['text' => $q, 'count' => 0, 'handoffs' => 0, 'lang' => $r->lang, 'last_asked' => (string) $r->created_at];
+            }
+            $groups[$key]['count']++;
+            if ($r->converted) $groups[$key]['handoffs']++;
+        }
+        usort($groups, fn ($a, $b) => $b['count'] <=> $a['count'] ?: strcmp($b['last_asked'], $a['last_asked']));
+
+        return response()->json([
+            'since'          => now()->subDays($days)->toDateString(),
+            'days'           => $days,
+            'total_asked'    => $rows->count(),
+            'unique'         => count($groups),
+            'questions'      => array_slice(array_values($groups), 0, 40),
         ], 200);
     }
 

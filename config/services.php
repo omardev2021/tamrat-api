@@ -98,4 +98,8 @@ return [
         'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-4-6'),
     ],
 
+    'faq' => [
+        'insights_secret' => env('FAQ_INSIGHTS_SECRET'),
+    ],
+
 ];

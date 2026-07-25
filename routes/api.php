@@ -14,6 +14,7 @@ use App\Http\Controllers\HelpersController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ChatwootBotController;
 use App\Http\Controllers\FaqBotController;
+use App\Http\Controllers\AiOutcomesController;
 use App\Http\Controllers\FulfillmentController;
 
 
@@ -67,6 +68,8 @@ Route::post('/chatwoot/webhook/{secret}',[ChatwootBotController::class,'webhook'
 Route::post('/faq-bot',[FaqBotController::class,'chat'])->middleware('throttle:20,1');
 // Content-signal insights (secret in path) — the questions visitors ask, grouped for content ideas.
 Route::get('/faq-insights/{secret}',[FaqBotController::class,'insights']);
+// AI outcomes (secret in path) — WhatsApp agent + FAQ bot business metrics for the Watar Dashboard.
+Route::get('/ai-outcomes/{secret}',[AiOutcomesController::class,'outcomes']);
 
 Route::post('/users/sms',[AuthController::class,'send_sms']);
 

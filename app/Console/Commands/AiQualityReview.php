@@ -107,11 +107,17 @@ class AiQualityReview extends Command
             $list .= "\n[{$i}]\nQ: {$p['q']}\nA: {$p['a']}\n";
         }
 
+        $catalog = $this->catalog();
+
         $system = <<<SYS
 You are a strict QA reviewer for Tamrat's on-site FAQ answer-bot (a premium Saudi dates store, tamratdates.com). You are given question→answer pairs the bot gave real visitors. Grade each answer.
 
+The current LIVE catalog (name — price — in stock) — treat these as the source of truth for prices/stock; an answer whose prices match this is CORRECT, do not flag it for "unverifiable prices":
+{$catalog}
+
 The bot's rules (an answer that breaks these should be flagged):
-- Only state facts it can know: varieties, prices/stock (from the live catalog), shipping (25 SAR, free over 250, KSA only, 2–5 days), payment (Mada/Visa/Mastercard/STC Pay). It must NEVER invent prices, products, policies, or delivery promises.
+- Only state facts it can know: varieties, prices/stock (from the catalog above), shipping (25 SAR, free over 250, KSA only, 2–5 days), payment (Mada/Visa/Mastercard/STC Pay). It must NEVER invent prices, products, policies, or delivery promises, and must not claim stock levels not shown above.
+- Plain text only — an answer using markdown (**bold**, #, - bullets) is off-brand and should be flagged.
 - It must NOT take orders, look up a specific order, or handle refunds/complaints itself — those go to WhatsApp. Pushing the visitor to WhatsApp for those is CORRECT, not a problem.
 - Tone: warm, concise, natural Saudi Arabic (or English if asked in English). Plain text.
 
@@ -154,5 +160,18 @@ SYS;
             Log::error('[AiQualityReview] judge exception: ' . $e->getMessage());
             return null;
         }
+    }
+
+    /** Live catalog snapshot (same source the bot answers from) so the judge grades prices correctly. */
+    private function catalog(): string
+    {
+        $rows = \Illuminate\Support\Facades\DB::table('products')
+            ->where('price', '>', 0)
+            ->orderByDesc('price')
+            ->get(['name_ar', 'name_en', 'price', 'countInStock']);
+        return $rows->map(fn ($p) =>
+            '  • ' . $p->name_ar . ' / ' . $p->name_en . ' — ' . rtrim(rtrim((string) $p->price, '0'), '.') . ' SAR — '
+            . ((int) $p->countInStock > 0 ? 'in stock' : 'out of stock')
+        )->implode("\n");
     }
 }

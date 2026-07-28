@@ -57,6 +57,10 @@ class FaqBotController extends Controller
             $reply = 'صار عندنا عطل بسيط 🙏 تقدر تتواصل معنا مباشرة على واتساب ونساعدك.';
         }
 
+        // The widget renders plain text; strip any markdown the model slips in (quality-review
+        // showed Haiku sometimes ignores the "plain text only" rule) so **bold** never shows raw.
+        $reply = $this->stripMarkdown($reply);
+
         // Content-signal flywheel: log the visitor's question so it feeds content ideas.
         $lastUser = null;
         for ($i = count($messages) - 1; $i >= 0; $i--) {
@@ -300,6 +304,17 @@ Never paste a URL yourself — the button carries the pre-filled message.
 - Never ask for or accept card details or personal addresses here.
 - Keep it accurate and brief. When in doubt, hand off via handoff_to_whatsapp.
 PROMPT;
+    }
+
+    /** Strip common markdown so the plain-text widget never shows raw **bold**, #, or - bullets. */
+    private function stripMarkdown(string $t): string
+    {
+        $t = preg_replace('/\*\*(.*?)\*\*/su', '$1', $t);   // **bold**
+        $t = preg_replace('/__(.*?)__/su', '$1', $t);       // __bold__
+        $t = preg_replace('/(?<!\*)\*(?!\*)(.+?)\*(?!\*)/su', '$1', $t); // *italic*
+        $t = preg_replace('/^\s{0,3}#{1,6}\s*/mu', '', $t); // # headers
+        $t = preg_replace('/^\s*[-*]\s+/mu', '• ', $t);     // - / * bullets → •
+        return trim($t);
     }
 
     /** Same cached catalog snapshot the WhatsApp agent uses. */

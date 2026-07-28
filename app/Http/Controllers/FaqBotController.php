@@ -71,7 +71,8 @@ class FaqBotController extends Controller
                 'query'     => mb_substr($lastUser, 0, 500),
                 'lang'      => preg_match('/\p{Arabic}/u', $lastUser) ? 'ar' : 'en',
                 'converted' => $this->handoffUrl !== null, // question showed buying/handoff intent
-                'meta'      => ['handoff' => $this->handoffUrl !== null],
+                // Log the answer too, so the quality-review judge can grade real Q&A pairs.
+                'meta'      => ['handoff' => $this->handoffUrl !== null, 'reply' => mb_substr($reply, 0, 800)],
             ]);
         }
 

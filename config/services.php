@@ -102,4 +102,9 @@ return [
         'insights_secret' => env('FAQ_INSIGHTS_SECRET'),
     ],
 
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'chat_id'   => env('TELEGRAM_CHAT_ID'),
+    ],
+
 ];

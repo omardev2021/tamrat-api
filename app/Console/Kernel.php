@@ -28,6 +28,13 @@ class Kernel extends ConsoleKernel
         // when services.lifecycle.wa_enabled + an approved template are set).
         $schedule->command('lifecycle:whatsapp --cooldown=21')
                  ->timezone('Asia/Riyadh')->dailyAt('10:30');
+
+        // AI ops — monitor the AI stack (alert on breakage) + a daily quality review of FAQ answers.
+        $schedule->command('ai:healthcheck')
+                 ->everyTenMinutes()->withoutOverlapping();
+
+        $schedule->command('ai:quality-review')
+                 ->timezone('Asia/Riyadh')->dailyAt('10:00');
     }
 
     /**
